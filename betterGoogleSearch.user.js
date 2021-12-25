@@ -2,7 +2,6 @@
 // @name          Better Google Search
 // @namespace     Better Google Search
 // @match         https://www.google.com/search?*
-// @match         https://www.google.com/*
 // @grant         GM_addStyle
 // @version       1.0
 // @author        kyosukyuu
@@ -171,7 +170,7 @@ GM_addStyle(`
   const isDark = getDefaultTheme();
 
   // bypass content-security-policy (CSP) to allow the script to work on google images
-  // WARNING: this makes innerHTML vulnerable to injection, comment / delete this conditional statement to disable this
+  // WARNING: this makes innerHTML vulnerable to injection, if you want to enable it, set the BYPASS_CSP variable to true
   if (window.trustedTypes?.createPolicy && BYPASS_CSP) {
     relativeParent = qSelect("input").parentElement.parentElement.parentElement;
     window.trustedTypes.createPolicy("default", {
