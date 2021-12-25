@@ -6,7 +6,7 @@
 // @grant         GM_addStyle
 // @version       1.0
 // @author        kyosukyuu
-// @description   Adds useful features for google searching. English support only. Tested on Brave Browser and Google Chrome.
+// @description   Adds useful features for google searching. English support only. Tested on Brave Browser. Intended to work with light mode and dark mode. Doesn't work on mobile view.
 // ==/UserScript==
 
 GM_addStyle(`
@@ -18,6 +18,10 @@ GM_addStyle(`
     top: 0;
     margin-left: 20px;
     z-index: 1;
+    background: #202124;
+  }
+  .btns--container-light {
+    background: #fff;
   }
   .btn {
     margin-right: 8px;
@@ -34,20 +38,26 @@ GM_addStyle(`
     user-select: none;
   }
   .btn--container-light {
-    color: #70757a !important
+    color: #70757a !important;
   }
   .btn--container:hover {
     color: #ddd
   }
-  .btn--container-light: hover {
-    color: #202124 !important
+  .btn--container-light:hover {
+    color: #202124 !important;
   }
-  .btn--container:hover .caret-dropdown {
+/*   .btn--container:hover .caret-dropdown {
     border-color: #ddd transparent;
   }
-
+  .btn--container-light:hover .caret-dropdown {
+    border-color: #202124 transparent !important;
+  }
+ */
   .btn--active {
     color: #e8eaed !important;
+  }
+  .btn--active-light {
+    color: #202124;
   }
   .caret-dropdown--active {
     border-color: #ddd transparent !important;
@@ -72,6 +82,9 @@ GM_addStyle(`
   .btn--container:hover > .btn--caret::after {
     border-color: #ddd transparent !important;
   }
+  .btn--container-light:hover > .btn--caret::after {
+    border-color: #202124 transparent !important;
+  }
 
 /*   .caret-dropdown {
     border-color: #9aa0a6 transparent;
@@ -95,6 +108,7 @@ GM_addStyle(`
     position: absolute;
     width: 100%;
     min-width: 80px;
+    max-width: 105px;
     top: 25px;
     overflow: hidden;
     list-style-type: none;
@@ -117,7 +131,6 @@ GM_addStyle(`
     display: flex;
     align-items: center;
     cursor: pointer;
-/*     max-width: 80px; */
     margin: auto;
   }
   .dropdown--items-light {
@@ -129,10 +142,20 @@ GM_addStyle(`
   .dropdown--items-light:hover, .dropdown--items-light:focus{
     background-color: rgba(0,0,0,0.1) !important;
   }
+
+  @media only screen and (max-width: 1450px) {
+    .btns--container {
+      flex-direction: column;
+      max-width: 125px;
+      box-shadow: 1px 1px 3px 2px #0000003b;
+    }
+  }
 `);
 
 (() => {
   "use strict";
+
+  const BYPASS_CSP = false;
 
   const qSelect = (selector) => document.querySelector(selector);
   const qSelectAll = (selectors) => document.querySelectorAll(selectors);
@@ -140,9 +163,16 @@ GM_addStyle(`
   let relativeParent =
     qSelect("input").parentElement.parentElement.parentElement.parentElement;
 
+  // check for theme
+  const getDefaultTheme = () => {
+    if (window?.matchMedia("(prefers-color-scheme: dark)").matches) return true;
+    return false;
+  };
+  const isDark = getDefaultTheme();
+
   // bypass content-security-policy (CSP) to allow the script to work on google images
   // WARNING: this makes innerHTML vulnerable to injection, comment / delete this conditional statement to disable this
-  if (window.trustedTypes?.createPolicy) {
+  if (window.trustedTypes?.createPolicy && BYPASS_CSP) {
     relativeParent = qSelect("input").parentElement.parentElement.parentElement;
     window.trustedTypes.createPolicy("default", {
       createHTML: (string, sink) => string,
@@ -200,8 +230,13 @@ GM_addStyle(`
 
   const toggleDropdown = (evt) => {
     if (evt.target !== evt.currentTarget) {
-      evt.currentTarget.classList.toggle("btn--active");
       evt.currentTarget.lastElementChild.classList.toggle("show");
+      // theme dependent styles
+      if (isDark) {
+        evt.currentTarget.classList.toggle("btn--active");
+      } else {
+        evt.currentTarget.classList.toggle("btn--active-light");
+      }
     }
   };
 
@@ -383,13 +418,10 @@ GM_addStyle(`
 
   attachActions();
 
-  const getDefaultTheme = () => {
-    if (window?.matchMedia("(prefers-color-scheme: dark)").matches) return true;
-    return false;
-  };
-
-  const isDark = getDefaultTheme();
   if (!isDark) {
+    Array.from(qSelectAll(".btns--container")).forEach((el) =>
+      el.classList.add("btns--container-light")
+    );
     Array.from(qSelectAll(".btn--container")).forEach((el) =>
       el.classList.add("btn--container-light")
     );
