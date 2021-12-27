@@ -3,9 +3,13 @@
 // @namespace     Better Google Search
 // @match         https://www.google.com/search?*
 // @grant         GM_addStyle
+// @require       https://openuserjs.org/src/libs/sizzle/GM_config.js
+// @grant         GM_getValue
+// @grant         GM_setValue
 // @version       1.0
 // @author        kyosukyuu
 // @description   Adds useful features for google searching. English support only. Tested on Brave Browser. Intended to work with light mode and dark mode. Doesn't work on mobile view.
+// @license       MIT
 // ==/UserScript==
 
 GM_addStyle(`
@@ -154,7 +158,25 @@ GM_addStyle(`
 (() => {
   "use strict";
 
-  const BYPASS_CSP = false;
+  const fieldDefs = {
+    "bypass-csp": {
+      section: [
+        GM_config.create("Functional Settings"),
+        "Affects the behavior of the script",
+      ],
+      label: "Bypass CSP",
+      type: "checkbox",
+      default: false,
+    },
+  };
+
+  GM_config.init({
+    id: "settings",
+    title: "Better Google Search Settings",
+    fields: fieldDefs,
+  });
+
+  const BYPASS_CSP = JSON.parse(GM_getValue("settings"))["bypass-csp"] || false;
 
   const qSelect = (selector) => document.querySelector(selector);
   const qSelectAll = (selectors) => document.querySelectorAll(selectors);
@@ -170,7 +192,7 @@ GM_addStyle(`
   const isDark = getDefaultTheme();
 
   // bypass content-security-policy (CSP) to allow the script to work on google images
-  // WARNING: this makes innerHTML vulnerable to injection, if you want to enable it, set the BYPASS_CSP variable to true
+  // WARNING: this makes innerHTML vulnerable to injection
   if (window.trustedTypes?.createPolicy && BYPASS_CSP) {
     relativeParent = qSelect("input").parentElement.parentElement.parentElement;
     window.trustedTypes.createPolicy("default", {
@@ -185,6 +207,7 @@ GM_addStyle(`
   const TERM_APPEARS = "TERM_APPEARS";
   const BEFORE = "BEFORE";
   const AFTER = "AFTER";
+  const SETTINGS = "SETTINGS";
 
   // contains all possible search actions you can perform
   const actions = [
@@ -195,9 +218,13 @@ GM_addStyle(`
       choices: [
         { name: "PDF", data: "pdf" },
         { name: "DOC", data: "doc" },
+        { name: "DOCX", data: "docx" },
         { name: "TXT", data: "txt" },
         { name: "LOG", data: "log" },
         { name: "PPT", data: "ppt" },
+        { name: "PPTX", data: "pptx" },
+        { name: "XML", data: "xml" },
+        { name: "TORRENT", data: "torrent" },
       ],
     },
     { name: "Exclude", action: EXCLUDE, data: "-", isUnique: false },
@@ -208,7 +235,10 @@ GM_addStyle(`
       choices: [
         { name: "reddit", data: "reddit.com" },
         { name: "stack overflow", data: "stackoverflow.com" },
-        { name: "custom", data: "" },
+        { name: "youtube", data: "youtube.com" },
+        { name: "twitter", data: "twitter.com" },
+        { name: "facebook" },
+        { name: "custom", data: "facebook.com" },
       ],
     },
     { name: "Exact Query", action: EXACT_QUERY, data: `""`, isUnique: false },
@@ -225,6 +255,7 @@ GM_addStyle(`
     },
     { name: "Before", action: BEFORE, data: "before:", isUnique: true },
     { name: "After", action: AFTER, data: "after:", isUnique: true },
+    { name: "Settings", action: SETTINGS, isUnique: true },
   ];
 
   const toggleDropdown = (evt) => {
@@ -367,6 +398,11 @@ GM_addStyle(`
       if (el.childElementCount === 1) {
         el.firstElementChild.addEventListener("click", (evt) => {
           const action = actions[i].data;
+
+          if (actions[i].action === SETTINGS) {
+            GM_config.open();
+            return;
+          }
 
           const input = qSelect("input");
 
