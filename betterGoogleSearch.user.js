@@ -6,7 +6,7 @@
 // @require       https://openuserjs.org/src/libs/sizzle/GM_config.js
 // @grant         GM_getValue
 // @grant         GM_setValue
-// @version       1.0
+// @version       1.3
 // @author        kyosukyuu
 // @description   Adds useful features for google searching. English support only. Tested on Brave Browser. Intended to work with light mode and dark mode. Doesn't work on mobile view.
 // @license       MIT
@@ -152,6 +152,10 @@ GM_addStyle(`
       max-width: 125px;
       box-shadow: 1px 1px 3px 2px #0000003b;
     }
+    .dropdown--container {
+      left: 113px;
+      top: 0;
+    }
   }
 `);
 
@@ -180,6 +184,8 @@ GM_addStyle(`
 
   const qSelect = (selector) => document.querySelector(selector);
   const qSelectAll = (selectors) => document.querySelectorAll(selectors);
+  const qAllCallback = (selector, callback) =>
+    Array.from(qSelectAll(selector)).forEach((el, i) => callback(el, i));
 
   let relativeParent =
     qSelect("input").parentElement.parentElement.parentElement.parentElement;
@@ -225,6 +231,7 @@ GM_addStyle(`
         { name: "PPTX", data: "pptx" },
         { name: "XML", data: "xml" },
         { name: "TORRENT", data: "torrent" },
+        { name: "RTF", data: "rtf" },
       ],
     },
     { name: "Exclude", action: EXCLUDE, data: "-", isUnique: false },
@@ -324,10 +331,10 @@ GM_addStyle(`
   createButtons();
 
   // attach buttons with dropdown function
-  Array.from(qSelectAll(".btn--container")).forEach((btn) =>
+  qAllCallback(".btn--container", (btn) =>
     btn.addEventListener("click", toggleDropdown)
   );
-  Array.from(qSelectAll(".dropdown--container")).forEach((el) => {
+  qAllCallback(".dropdown--container", (el) => {
     el.addEventListener("click", (evt) => evt.stopPropagation());
     // add caret to buttons with dropdown
     el.previousElementSibling.classList.add("btn--caret");
@@ -336,20 +343,20 @@ GM_addStyle(`
   // close dropdown menus when clicked on somewhere other than the dropdown areas
   window.onclick = (evt) => {
     if (!evt.target.matches(".btn")) {
-      Array.from(qSelectAll(".dropdown--container")).forEach(
-        (container) =>
-          container.classList.contains("show") &&
-          container.classList.remove("show")
+      qAllCallback(
+        ".dropdown--container",
+        ({ classList }) =>
+          classList.contains("show") && classList.remove("show")
       );
-      Array.from(qSelectAll(".btn--active")).forEach((btn) =>
-        btn.classList.remove("btn--active")
+      qAllCallback(".btn--active", ({ classList }) =>
+        classList.remove("btn--active")
       );
     }
   };
 
   const attachActions = () => {
     // attach dropdown items with click handler
-    Array.from(qSelectAll(".dropdown--items")).forEach((item) => {
+    qAllCallback(".dropdown--items", (item) => {
       item.addEventListener("click", (evt) => {
         const parentAction =
           evt.currentTarget.getAttribute("data-parent-action");
@@ -394,7 +401,7 @@ GM_addStyle(`
     });
 
     // attach non-having dropdown items with click handler
-    Array.from(qSelectAll(".btn--container")).forEach((el, i) => {
+    qAllCallback(".btn--container", (el, i) => {
       if (el.childElementCount === 1) {
         el.firstElementChild.addEventListener("click", (evt) => {
           const action = actions[i].data;
@@ -454,16 +461,16 @@ GM_addStyle(`
   attachActions();
 
   if (!isDark) {
-    Array.from(qSelectAll(".btns--container")).forEach((el) =>
+    qAllCallback(".btns--container", (el) =>
       el.classList.add("btns--container-light")
     );
-    Array.from(qSelectAll(".btn--container")).forEach((el) =>
+    qAllCallback(".btn--container", (el) =>
       el.classList.add("btn--container-light")
     );
-    Array.from(qSelectAll(".dropdown--container")).forEach((el) =>
+    qAllCallback(".dropdown--container", (el) =>
       el.classList.add("dropdown--container-light")
     );
-    Array.from(qSelectAll(".dropdown--items")).forEach((el) =>
+    qAllCallback(".dropdown--items", (el) =>
       el.classList.add("dropdown--items-light")
     );
   }
