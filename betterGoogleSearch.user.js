@@ -6,7 +6,7 @@
 // @grant         GM_getValue
 // @grant         GM_setValue
 // @grant         GM_registerMenuCommand
-// @version       1.5
+// @version       1.5.1
 // @author        kyosukyuu
 // @description   Adds useful features for google searching. English support only. Tested on Brave Browser. Intended to work with light mode and dark mode. Doesn't work on mobile view.
 // @license       MIT
@@ -156,7 +156,7 @@ GM_addStyle(`
     width: 330px;
     height: 120.50px;
   }
-  .__MonkeyConfig_frame {
+  #__MonkeyConfig_frame {
     width: 100%;
   }
 
