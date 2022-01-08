@@ -6,7 +6,7 @@
 // @grant         GM_getValue
 // @grant         GM_setValue
 // @grant         GM_registerMenuCommand
-// @version       1.6
+// @version       1.7
 // @author        kyosukyuu
 // @description   Adds useful features for google searching. English support only. Tested on Brave Browser. Intended to work with light mode and dark mode. Doesn't work on mobile view.
 // @license       MIT
@@ -23,6 +23,7 @@ GM_addStyle(`
     margin-left: 20px;
     z-index: 1;
     background: #202124;
+    border-radius: 3px;
   }
   .btns--container-light {
     background: #fff;
@@ -112,10 +113,12 @@ GM_addStyle(`
     background-color: #202124;
     position: absolute;
     width: 100%;
-    min-width: 80px;
+    min-width: 100px;
     max-width: 105px;
+    max-height: 200px;
     top: 25px;
     overflow: hidden;
+    overflow-y: auto;
     list-style-type: none;
   }
   .dropdown--container-light {
@@ -174,7 +177,7 @@ GM_addStyle(`
       box-shadow: 1px 1px 3px 2px #0000003b;
     }
     .dropdown--container {
-      left: 113px;
+      left: 117px;
       top: 0;
     }
   }
@@ -1215,6 +1218,7 @@ body.__MonkeyConfig_body {\
   const AFTER = "AFTER";
   const DOMAIN = "DOMAIN";
   const SETTINGS = "SETTINGS";
+  const LANGUAGE = "LANGUAGE";
 
   // contains all possible search actions you can perform
   const fileTypeData = {
@@ -1240,12 +1244,14 @@ body.__MonkeyConfig_body {\
     action: EXCLUDE,
     data: "-",
     isUnique: false,
+    urlBased: false,
   };
   const siteData = {
     name: "Site",
     action: SITE,
     data: "site:",
     isUnique: true,
+    urlBased: false,
     choices: [
       { name: "reddit", data: "reddit.com" },
       { name: "stack overflow", data: "stackoverflow.com" },
@@ -1260,6 +1266,7 @@ body.__MonkeyConfig_body {\
     action: DOMAIN,
     data: "site:",
     isUnique: true,
+    urlBased: false,
     choices: [
       { name: ".com", data: ".com" },
       { name: ".org", data: ".org" },
@@ -1272,11 +1279,13 @@ body.__MonkeyConfig_body {\
     action: EXACT_QUERY,
     data: `""`,
     isUnique: false,
+    urlBased: false,
   };
   const termAppearsData = {
     name: "Term Appears",
     action: TERM_APPEARS,
     isUnique: false,
+    urlBased: false,
     choices: [
       { name: "in the title of the page", data: "allintitle:" },
       { name: "in the text of the page", data: "allintext:" },
@@ -1289,17 +1298,74 @@ body.__MonkeyConfig_body {\
     action: BEFORE,
     data: "before:",
     isUnique: true,
+    urlBased: false,
   };
   const afterData = {
     name: "After (Time)",
     action: AFTER,
     data: "after:",
     isUnique: true,
+    urlBased: false,
   };
   const settingsData = {
     name: "Settings",
     action: SETTINGS,
     isUnique: true,
+    urlBased: false,
+  };
+  const languageData = {
+    name: "Language",
+    action: LANGUAGE,
+    data: "&lr=lang_",
+    isUnique: true,
+    urlBased: true,
+    choices: [
+      { name: "Any", data: "" },
+      { name: "Afrikaans", data: "af" },
+      { name: "Arabic", data: "ar" },
+      { name: "Armenian", data: "hy" },
+      { name: "Byelorussian", data: "be" },
+      { name: "Bulgarian", data: "bg" },
+      { name: "Catalan", data: "ca" },
+      { name: "Chinese (Simplified)", data: "zh-CN" },
+      { name: "Chinese (Traditional)", data: "zh-TW" },
+      { name: "Croatian", data: "hr" },
+      { name: "Czech", data: "cs" },
+      { name: "Dutch", data: "nl" },
+      { name: "Esperanto", data: "eo" },
+      { name: "Estonian", data: "et" },
+      { name: "English", data: "en" },
+      { name: "Tagalog", data: "tl" },
+      { name: "Finnish", data: "fi" },
+      { name: "French", data: "fr" },
+      { name: "German", data: "de" },
+      { name: "Greek", data: "el" },
+      { name: "Hebrew", data: "iw" },
+      { name: "Hindi", data: "hi" },
+      { name: "Hungarian", data: "hu" },
+      { name: "Icelandic", data: "is" },
+      { name: "Indonesian", data: "id" },
+      { name: "Italian", data: "it" },
+      { name: "Japanese", data: "ja" },
+      { name: "Korean", data: "ko" },
+      { name: "Latvian", data: "lv" },
+      { name: "Lithuanian", data: "lt" },
+      { name: "Norwegian", data: "no" },
+      { name: "Persian", data: "fa" },
+      { name: "Polish", data: "pl" },
+      { name: "Romanian", data: "ro" },
+      { name: "Russian", data: "ru" },
+      { name: "Serbian", data: "sr" },
+      { name: "Slovak", data: "sk" },
+      { name: "Slovenian", data: "sl" },
+      { name: "Spanish", data: "es" },
+      { name: "Swahili", data: "sw" },
+      { name: "Swedish", data: "sv" },
+      { name: "Thai", data: "th" },
+      { name: "Turkish", data: "tr" },
+      { name: "Ukrainian", data: "uk" },
+      { name: "Vietnamese", data: "vi" },
+    ],
   };
 
   const actions = [
@@ -1312,6 +1378,7 @@ body.__MonkeyConfig_body {\
     siteData,
     domainData,
     termAppearsData,
+    languageData,
   ];
 
   const toggleDropdown = (evt) => {
@@ -1420,17 +1487,32 @@ body.__MonkeyConfig_body {\
 
   const attachActions = () => {
     // attach dropdown items with click handler
-    qAllCallback(".dropdown--items", (item, i) => {
+    qAllCallback(".dropdown--items", (item) => {
       item.addEventListener("click", (evt) => {
         const parentAction =
           evt.currentTarget.getAttribute("data-parent-action");
         const action = evt.currentTarget.getAttribute("data-action");
-        const isUnique =
-          actions[evt.currentTarget.getAttribute("data-parent-action-index")]
-            .isUnique;
-        const actionType =
-          actions[evt.currentTarget.getAttribute("data-parent-action-index")]
-            .action;
+        const actionObject =
+          actions[evt.currentTarget.getAttribute("data-parent-action-index")];
+        const isUnique = actionObject.isUnique;
+        const actionType = actionObject.action;
+        const urlBased = actionObject.urlBased;
+
+        // special case for options that modify the search url and not the search bar
+        if (urlBased) {
+          let currentURL = window.location.href;
+          const expression = new RegExp(
+            "(&lr=lang_[a-z]{2}-[A-Z]{2}|&lr=lang_[a-z]{2}|&lr=lang_|&lr=lang|&lr=|&lr)",
+            "gi"
+          );
+          if (action === "") {
+            document.location.href = currentURL.replace(expression, "");
+            return;
+          } else if ((currentURL.match(expression), "gi"))
+            currentURL = currentURL.replace(expression, "");
+          document.location.href = `${currentURL}${parentAction}${action}`;
+          return;
+        }
 
         const input = qSelect("input");
 
@@ -1477,6 +1559,7 @@ body.__MonkeyConfig_body {\
         el.firstElementChild.addEventListener("click", (evt) => {
           const action = actions[i].data;
 
+          // unique case for settings
           if (actions[i].action === SETTINGS) {
             cfg.open();
             return;
