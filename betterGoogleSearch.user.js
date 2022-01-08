@@ -6,7 +6,7 @@
 // @grant         GM_getValue
 // @grant         GM_setValue
 // @grant         GM_registerMenuCommand
-// @version       1.5.1
+// @version       1.6
 // @author        kyosukyuu
 // @description   Adds useful features for google searching. English support only. Tested on Brave Browser. Intended to work with light mode and dark mode. Doesn't work on mobile view.
 // @license       MIT
@@ -15,6 +15,7 @@
 GM_addStyle(`
   .btns--container {
     display: flex;
+    flex-wrap: wrap;
     position: absolute;
     width: 100%;
     left: 100%;
@@ -34,6 +35,7 @@ GM_addStyle(`
     position: relative;
     padding: 4px;
     margin: 0 6px;
+    margin-bottom: 6px;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
@@ -144,6 +146,11 @@ GM_addStyle(`
   }
   .dropdown--items-light:hover, .dropdown--items-light:focus{
     background-color: rgba(0,0,0,0.1) !important;
+  }
+
+  .flex-break {
+    flex-basis: 100%;
+    height: 0;
   }
 
   .__MonkeyConfig_overlay {
@@ -1210,67 +1217,101 @@ body.__MonkeyConfig_body {\
   const SETTINGS = "SETTINGS";
 
   // contains all possible search actions you can perform
+  const fileTypeData = {
+    name: "File Type",
+    action: FILE_TYPE,
+    data: "filetype:",
+    isUnique: true,
+    choices: [
+      { name: "PDF", data: "pdf" },
+      { name: "DOC", data: "doc" },
+      { name: "DOCX", data: "docx" },
+      { name: "TXT", data: "txt" },
+      { name: "LOG", data: "log" },
+      { name: "PPT", data: "ppt" },
+      { name: "PPTX", data: "pptx" },
+      { name: "XML", data: "xml" },
+      { name: "TORRENT", data: "torrent" },
+      { name: "RTF", data: "rtf" },
+    ],
+  };
+  const excludeData = {
+    name: "Exclude",
+    action: EXCLUDE,
+    data: "-",
+    isUnique: false,
+  };
+  const siteData = {
+    name: "Site",
+    action: SITE,
+    data: "site:",
+    isUnique: true,
+    choices: [
+      { name: "reddit", data: "reddit.com" },
+      { name: "stack overflow", data: "stackoverflow.com" },
+      { name: "youtube", data: "youtube.com" },
+      { name: "twitter", data: "twitter.com" },
+      { name: "facebook", data: "facebook.com" },
+      { name: "custom", data: "" },
+    ],
+  };
+  const domainData = {
+    name: "Domain",
+    action: DOMAIN,
+    data: "site:",
+    isUnique: true,
+    choices: [
+      { name: ".com", data: ".com" },
+      { name: ".org", data: ".org" },
+      { name: ".edu", data: ".edu" },
+      { name: ".net", data: ".net" },
+    ],
+  };
+  const exactQueryData = {
+    name: "Exact Query",
+    action: EXACT_QUERY,
+    data: `""`,
+    isUnique: false,
+  };
+  const termAppearsData = {
+    name: "Term Appears",
+    action: TERM_APPEARS,
+    isUnique: false,
+    choices: [
+      { name: "in the title of the page", data: "allintitle:" },
+      { name: "in the text of the page", data: "allintext:" },
+      { name: "in the URL of the page", data: "allinurl:" },
+      { name: "in links to the page", data: "allinanchor:" },
+    ],
+  };
+  const beforeData = {
+    name: "Before (Time)",
+    action: BEFORE,
+    data: "before:",
+    isUnique: true,
+  };
+  const afterData = {
+    name: "After (Time)",
+    action: AFTER,
+    data: "after:",
+    isUnique: true,
+  };
+  const settingsData = {
+    name: "Settings",
+    action: SETTINGS,
+    isUnique: true,
+  };
+
   const actions = [
-    {
-      name: "File Type",
-      action: FILE_TYPE,
-      data: "filetype:",
-      isUnique: true,
-      choices: [
-        { name: "PDF", data: "pdf" },
-        { name: "DOC", data: "doc" },
-        { name: "DOCX", data: "docx" },
-        { name: "TXT", data: "txt" },
-        { name: "LOG", data: "log" },
-        { name: "PPT", data: "ppt" },
-        { name: "PPTX", data: "pptx" },
-        { name: "XML", data: "xml" },
-        { name: "TORRENT", data: "torrent" },
-        { name: "RTF", data: "rtf" },
-      ],
-    },
-    { name: "Exclude", action: EXCLUDE, data: "-", isUnique: false },
-    {
-      name: "Site",
-      action: SITE,
-      data: "site:",
-      isUnique: true,
-      choices: [
-        { name: "reddit", data: "reddit.com" },
-        { name: "stack overflow", data: "stackoverflow.com" },
-        { name: "youtube", data: "youtube.com" },
-        { name: "twitter", data: "twitter.com" },
-        { name: "facebook", data: "facebook.com" },
-        { name: "custom", data: "" },
-      ],
-    },
-    {
-      name: "Domain",
-      action: DOMAIN,
-      data: "site:",
-      isUnique: true,
-      choices: [
-        { name: ".com", data: ".com" },
-        { name: ".org", data: ".org" },
-        { name: ".edu", data: ".edu" },
-        { name: ".net", data: ".net" },
-      ],
-    },
-    { name: "Exact Query", action: EXACT_QUERY, data: `""`, isUnique: false },
-    {
-      name: "Term Appears",
-      action: TERM_APPEARS,
-      isUnique: false,
-      choices: [
-        { name: "in the title of the page", data: "allintitle:" },
-        { name: "in the text of the page", data: "allintext:" },
-        { name: "in the URL of the page", data: "allinurl:" },
-        { name: "in links to the page", data: "allinanchor:" },
-      ],
-    },
-    { name: "Before (Time)", action: BEFORE, data: "before:", isUnique: true },
-    { name: "After (Time)", action: AFTER, data: "after:", isUnique: true },
-    { name: "Settings", action: SETTINGS, isUnique: true },
+    excludeData,
+    exactQueryData,
+    beforeData,
+    afterData,
+    settingsData,
+    fileTypeData,
+    siteData,
+    domainData,
+    termAppearsData,
   ];
 
   const toggleDropdown = (evt) => {
@@ -1283,6 +1324,16 @@ body.__MonkeyConfig_body {\
         evt.currentTarget.classList.toggle("btn--active-light");
       }
     }
+
+    qAllCallback(".show", (el, i) => {
+      if (
+        el.previousElementSibling?.innerText !==
+        evt.currentTarget.firstElementChild?.innerText
+      ) {
+        el.classList.remove("show");
+        el.parentElement.classList.remove("btn--active");
+      }
+    });
   };
 
   const createButtons = () => {
@@ -1319,6 +1370,10 @@ body.__MonkeyConfig_body {\
         `;
       }
 
+      let flexBreak = "";
+      if (actions[i].action === SETTINGS)
+        flexBreak = `<div class="flex-break"><div>`;
+
       if (hasDropdown) {
         buttonsContainer.innerHTML += `
           <section class="btn--container">
@@ -1331,6 +1386,7 @@ body.__MonkeyConfig_body {\
           <section class="btn--container">
             <div class="btn">${action.name}</div>
           </section>
+          ${flexBreak}
         `;
       }
     });
